@@ -1,8 +1,8 @@
-// sumulate getting products from DataBase
+// simulate getting products from DataBase
 const products = [
-  { name: "Apples_:", country: "Italy", cost: 3, instock: 10 },
+  { name: "Apples:", country: "Italy", cost: 3, instock: 10 },
   { name: "Oranges:", country: "Spain", cost: 4, instock: 3 },
-  { name: "Beans__:", country: "USA", cost: 2, instock: 5 },
+  { name: "Beans:", country: "USA", cost: 2, instock: 5 },
   { name: "Cabbage:", country: "USA", cost: 1, instock: 8 },
 ];
 //=========Cart=============
@@ -78,21 +78,15 @@ const Products = (props) => {
   const [items, setItems] = React.useState(products);
   const [cart, setCart] = React.useState([]);
   const [total, setTotal] = React.useState(0);
-  const {
-    Card,
-    Accordion,
-    Button,
-    Container,
-    Row,
-    Col,
-    Image,
-    Input,
-  } = ReactBootstrap;
+  const [zeroInCart, setZeroInCart] = React.useState(true);
+  const [totalSpent, setTotalSpent] = React.useState(0);
+  const { Card, Accordion, Button, Container, Row, Col, Image, Input } =
+    ReactBootstrap;
   //  Fetch Data
   const { Fragment, useState, useEffect, useReducer } = React;
-  const [query, setQuery] = useState("http://localhost:1337/products");
+  const [query, setQuery] = useState("http://localhost:5000/products");
   const [{ data, isLoading, isError }, doFetch] = useDataApi(
-    "http://localhost:1337/products",
+    "http://localhost:5000/products",
     {
       data: [],
     }
@@ -102,35 +96,42 @@ const Products = (props) => {
   const addToCart = (e) => {
     let name = e.target.name;
     let item = items.filter((item) => item.name == name);
-    if (item[0].instock == 0) return;
-    item[0].instock = item[0].instock - 1;
-    console.log(`add to Cart ${JSON.stringify(item)}`);
+    item[0].instock -= 1;
+    // console.log(`add to Cart ${JSON.stringify(item)}`);
     setCart([...cart, ...item]);
+    setZeroInCart(false);
+    doFetch(query);
   };
-  const deleteCartItem = (delIndex) => {
-    // this is the index in the cart not in the Product List
-
-    let newCart = cart.filter((item, i) => delIndex != i);
-    let target = cart.filter((item, index) => delIndex == index);
-    let newItems = items.map((item, index) => {
-      if (item.name == target[0].name) item.instock = item.instock + 1;
-      return item;
-    });
+  const deleteCartItem = (index) => {
+    let newCart = cart.filter((item, i) => index != i);
     setCart(newCart);
-    setItems(newItems);
   };
   const photos = ["apple.png", "orange.png", "beans.png", "cabbage.png"];
 
   let list = items.map((item, index) => {
-    let n = index + 1049;
-    let uhit = "https://picsum.photos/" + n;
+    let valid = false;
+    if (items[index].instock <= 0) {
+      valid = true;
+    }
+
+    // let n = index + 1049;
+    // let url = "https://picsum.photos/id/" + n + "/50/50";
+
     return (
       <li key={index}>
-        <Image src={uhit} width={70} roundedCircle></Image>
-        <Button variant="primary" size="large">
-          {item.name}:${item.cost}-Stock={item.instock}
+        <Image src={photos[index % 4]} width={70} roundedCircle></Image>
+        <Button
+          onClick={addToCart}
+          disabled={valid}
+          name={item.name}
+          id={item.id}
+          variant="primary"
+          size="large"
+        >
+          {item.name} ${item.cost}
+          <hr />
+          In stock: {item.instock}
         </Button>
-        <input name={item.name} type="submit" onClick={addToCart}></input>
       </li>
     );
   });
@@ -171,9 +172,9 @@ const Products = (props) => {
     const reducer = (accum, current) => accum + current;
     let newTotal = costs.reduce(reducer, 0);
     console.log(`total updated to ${newTotal}`);
-    //cart.map((item, index) => deleteCartItem(index));
     return newTotal;
   };
+  // TODO: implement the restockProducts function
   const restockProducts = (url) => {
     doFetch(url);
     let newItems = data.map((item) => {
@@ -181,6 +182,11 @@ const Products = (props) => {
       return { name, country, cost, instock };
     });
     setItems([...items, ...newItems]);
+  };
+
+  const emptyCart = () => {
+    setCart([]);
+    setZeroInCart(true);
   };
 
   return (
@@ -196,14 +202,22 @@ const Products = (props) => {
         </Col>
         <Col>
           <h1>CheckOut </h1>
-          <Button onClick={checkOut}>CheckOut $ {finalList().total}</Button>
+          <Button disabled={zeroInCart} onClick={checkOut}>
+            CheckOut $ {finalList().total}
+          </Button>
           <div> {finalList().total > 0 && finalList().final} </div>
+        </Col>
+        <Col>
+          <h1>Empty Cart</h1>
+          <Button disabled={zeroInCart} onClick={emptyCart}>
+            Empty Cart
+          </Button>
         </Col>
       </Row>
       <Row>
         <form
           onSubmit={(event) => {
-            restockProducts(`http://localhost:1337/${query}`);
+            restockProducts(`http://localhost:5000/${query}`);
             console.log(`Restock called on ${query}`);
             event.preventDefault();
           }}
@@ -221,3 +235,4 @@ const Products = (props) => {
 };
 // ========================================
 ReactDOM.render(<Products />, document.getElementById("root"));
+
